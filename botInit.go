@@ -13,8 +13,8 @@ func InitBot(token string, debug bool) (*tgbotapi.BotAPI, tgbotapi.UpdatesChanne
 	bot.Debug = debug
 
 	u := tgbotapi.NewUpdate(0)
-    u.Timeout = 60
-    updates := bot.GetUpdatesChan(u)
+	u.Timeout = 28800
+	updates := bot.GetUpdatesChan(u)
 
 	return bot, updates, nil
 }
