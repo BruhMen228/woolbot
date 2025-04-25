@@ -7,6 +7,7 @@ import (
 	"os"
 	"github.com/BruhMen228/woolbot"
 	"github.com/BruhMen228/woolbot/internal/handlers"
+	botmth "github.com/BruhMen228/woolbot/internal/bot"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 )
@@ -18,7 +19,7 @@ func main() {
 	if err != nil {
 		logger.Error("ошибка загрузки .env", slog.String("ошибка", err.Error()))
 	}
-	go startBot(logger)
+	startBot(logger)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -43,7 +44,7 @@ func startBot(logger *slog.Logger) {
 		return
 	}
 
-	bot, updates, err := woolbot.InitBot(token, false)
+	bot, updates, err := woolbot.InitBot(token, false, 60)
 	if err != nil {
 		logger.Error("ошибка инициализации бота", slog.String("ошибка", err.Error()))
 		return
@@ -67,13 +68,15 @@ func startBot(logger *slog.Logger) {
 			if err != nil {
 				logger.Error("сообщение не было отправлено", slog.String("ошибка", err.Error()))
 				if err.Error() == "context deadline exceeded (Client.Timeout or context cancellation while reading body)" {
-					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Время ожидания ответа превышено. Пожалуйста, попробуйте ещё раз.")
+					
+					text := "Время ожидания ответа превышено. Пожалуйста, попробуйте ещё раз."
 
-					msg.ReplyToMessageID = update.Message.MessageID
+					err := botmth.SendMessage(bot, update.Message.Chat.ID, text, update.Message.MessageID)
 
-					if _, err := bot.Send(msg); err != nil {
+					if err != nil {
 						logger.Error("сообщение бота не было отправлено", slog.String("ошибка", err.Error()))
 					}
+					
 				}
 			}
 		}(update)

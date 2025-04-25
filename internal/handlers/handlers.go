@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+	botmth "github.com/BruhMen228/woolbot/internal/bot"
 	"github.com/BruhMen228/woolbot/internal/openRouter"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -23,6 +25,9 @@ func HandleCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) error {
 	if update.Message != nil {
 		if update.Message.IsCommand() {
 			if handler, ok := Commands[update.Message.Command()]; ok {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				go botmth.RequestAction(bot, update.Message.Chat.ID, tgbotapi.ChatTyping, ctx)
 				err := handler(bot, update)
 				return err
 			}
@@ -36,19 +41,13 @@ func HandleCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) error {
 }
 
 func StartHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) error {
-	action := tgbotapi.NewChatAction(update.Message.Chat.ID, tgbotapi.ChatTyping)
-
-	if _, err := bot.Request(action); err != nil {
-		return err
-	}
-
 	msgFrom := update.Message.From.FirstName
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Привет %s! Это WoolBot. Чтобы задать вопрос, напиши: \"Шерсть, (твой вопрос).\"", msgFrom))
+	text := fmt.Sprintf("Привет %s! Это WoolBot. Чтобы задать вопрос, напиши: \"Шерсть, (твой вопрос).\"", msgFrom)
 
-	msg.ReplyToMessageID = update.Message.MessageID
+	err := botmth.SendMessage(bot, update.Message.Chat.ID, text, update.Message.MessageID)
 
-	if _, err := bot.Send(msg); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -56,17 +55,11 @@ func StartHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) error {
 }
 
 func HelpHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) error {
-	action := tgbotapi.NewChatAction(update.Message.Chat.ID, tgbotapi.ChatTyping)
+	text := "Доступные команды:\n/start - начать\n/help - помощь\n/info - информация о боте"
 
-	if _, err := bot.Request(action); err != nil {
-		return err
-	}
+	err := botmth.SendMessage(bot, update.Message.Chat.ID, text, update.Message.MessageID)
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Доступные команды:\n/start - начать\n/help - помощь\n/info - информация о боте")
-
-	msg.ReplyToMessageID = update.Message.MessageID
-
-	if _, err := bot.Send(msg); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -74,17 +67,11 @@ func HelpHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) error {
 }
 
 func InfoHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) error {
-	action := tgbotapi.NewChatAction(update.Message.Chat.ID, tgbotapi.ChatTyping)
+	text := "WoolBot - секретное оружие Великих Шерстистых Повторителей по подавлению восстаний\nТакже в WoolBot встроена нейросеть для общения и ответов на вопросы"
 
-	if _, err := bot.Request(action); err != nil {
-		return err
-	}
+	err := botmth.SendMessage(bot, update.Message.Chat.ID, text, update.Message.MessageID)
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "WoolBot - секретное оружие Великих Шерстистых Повторителей по подавлению восстаний\nТакже в WoolBot встроена нейросеть для общения и ответов на вопросы")
-
-	msg.ReplyToMessageID = update.Message.MessageID
-
-	if _, err := bot.Send(msg); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -130,20 +117,19 @@ func TextHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) error {
 
 	msgQuery := strings.Join(msgSplitted[1:], " ")
 
-	action := tgbotapi.NewChatAction(update.Message.Chat.ID, tgbotapi.ChatTyping)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	if _, err := bot.Request(action); err != nil {
-		return err
-	}
+	go botmth.RequestAction(bot, update.Message.Chat.ID, tgbotapi.ChatTyping, ctx)
 
-	ctx, err := os.ReadFile("./История клана.txt")
+	ctxAi, err := os.ReadFile("./История клана.txt")
 	if err != nil {
 		return err
 	}
 	
-	apiKey := os.Getenv("API_KEY2")
+	apiKey := os.Getenv("API_KEY")
 
-	resp, err := openrouter.RequestToOpenRouterAi(apiKey, "deepseek/deepseek-chat-v3-0324:free", "Targon", string(ctx), msgQuery)
+	resp, err := openrouter.RequestToOpenRouterAi(apiKey, "deepseek/deepseek-chat-v3-0324:free", "Targon", string(ctxAi), msgQuery)
 	if err != nil {
 		return err
 	}
@@ -176,11 +162,9 @@ func TextHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) error {
 		respAi = textData.Error.Message
 	}
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, respAi)
+	err = botmth.SendMessage(bot, update.Message.Chat.ID, respAi, update.Message.MessageID)
 
-	msg.ReplyToMessageID = update.Message.MessageID
-
-	if _, err := bot.Send(msg); err != nil {
+	if err != nil {
 		return err
 	}
 
