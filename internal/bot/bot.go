@@ -10,7 +10,7 @@ import (
 func SendMessage(bot *tgbotapi.BotAPI, chatID int64, text string, replyTo int) error {
 	msg := tgbotapi.NewMessage(chatID, text)
 
-	//msg.ParseMode = tgbotapi.ModeMarkdownV2
+	msg.ParseMode = tgbotapi.ModeMarkdown
 
 	if replyTo != -1 {
 		msg.ReplyToMessageID = replyTo
