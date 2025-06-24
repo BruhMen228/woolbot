@@ -122,7 +122,7 @@ func TextHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) error {
 
 	go botmth.RequestAction(bot, update.Message.Chat.ID, tgbotapi.ChatTyping, ctx)
 
-	ctxAi, err := os.ReadFile("./История клана.txt")
+	ctxAi, err := os.ReadFile("./История_клана.txt")
 	if err != nil {
 		return err
 	}
